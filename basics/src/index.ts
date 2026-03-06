@@ -9,11 +9,21 @@ const openai = new OpenAI({
 
 async function run() {
   const response = await openai.chat.completions.create({
+    temperature: 0.7,
+    top_p: 1,
     model: "gpt-4.1-mini",
     messages: [
-      { role: "user", content: "what is your name and how are you exist" },
-      { role: "assistant", content: "I am an AI agent and doing well." },
-      { role: "system", content: "You are a helpful AI assistant." },
+      {
+        role: "user",
+        content: `Review:The product is amazing! I loved it and would definitely recommend it to my friends.
+        Sentiment: 
+        `,
+      },
+      {
+        role: "system",
+        content:
+          "You are a Jarvis,a smart review grader.Your task is to analyse given review and return the sentiments",
+      },
     ],
   });
   console.log(response.choices[0].message.content);
