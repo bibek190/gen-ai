@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { OpenAI } from "openai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -7,50 +7,75 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// creating our own tool to get time in new york
-async function getTimeInNewYork() {
-  return new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+async function getNewYorkTime() {
+  return new Date().toLocaleString("en-US", {
+    timeZone: "America/New_York",
+  });
 }
 
-type Content = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
+function calculator(a, b) {
+  return a + b;
+}
 
-async function callOpenAITool() {
-  const content: Content[] = [
-    {
-      role: "system",
-      content: "You are a helpful assistant that helps answer questions.",
-    },
-    {
-      role: "user",
-      content: "What is current time in New York?",
-    },
-  ];
-  const response = await client.responses.create({
+async function run() {
+  const response = await client.chat.completions.create({
     model: "gpt-4.1-mini",
-    input: content,
+    messages: [
+      {
+        role: "user",
+        content: "What is 33+33 and what time is it in New York?",
+      },
+    ],
     tools: [
       {
         type: "function",
         function: {
-          name: "getTimeInNewYork",
-          description: "Get the current time in New York",
+          name: "getNewYorkTime",
+          description: "Get the current time of new York",
+          parameters: {
+            type: "object",
+            properties: {},
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "calculator",
+          description: "A simple calculator that can add two numbers",
+          parameters: {
+            type: "object",
+            properties: {
+              a: {
+                type: "number",
+                description: "The first number",
+              },
+              b: {
+                type: "number",
+                description: "The second number",
+              },
+            },
+            required: ["a", "b"],
+          },
         },
       },
     ],
-    tool_choice: "auto",
   });
-  //    decide tool to call
-  const toolCall = response.output.find((item) => item.type === "tool_call");
+  const message = response.choices[0].message;
+  if (message.tool_calls) {
+    const toolCall = message.tool_calls[0];
+    const toolName = toolCall.function.name;
 
-  if (toolCall) {
-    console.log("Tool requested:", toolCall.name);
-    console.log("Arguments:", toolCall.arguments);
+    if (toolName === "calculator") {
+      const args = JSON.parse(toolCall.function.arguments);
+      const result = calculator(args.a, args.b);
+      console.log("Tool result:", result);
+    }
+    if (toolName === "getNewYorkTime") {
+      const result = await getNewYorkTime();
+
+      console.log("Tool result:", result);
+    }
   }
-
-  const responseMessage = response.output_text;
-  console.log("Assistant:", responseMessage);
 }
-callOpenAITool();
+run();
